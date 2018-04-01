@@ -38,6 +38,9 @@ def draw_bbox_and_label(frame, label, color, xmin, xmax, ymin, ymax):
       cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 4)
       cv2.putText(frame, label, (xmin, ymin-15),cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,128), 3)
  
+valid_frame = 0;
+invalid_frame = 0;
+manual_check_frame = 0;
 
 def greengrass_infinite_infer_run():
 	modelPath = "deploy_ssd_resnet50_512"
@@ -66,8 +69,8 @@ def greengrass_infinite_infer_run():
 	yscale = float(frame.shape[0]/input_height)
 	xscale = float(frame.shape[1]/input_width)
 
-        first = True
-	while True:
+        doInfer = True
+	while doInfer:
 		# Get a frame from the video stream
 		ret, frame = awscam.getLastFrame()
 		# Raise an exception if failing to get a frame
@@ -99,7 +102,20 @@ def greengrass_infinite_infer_run():
                                 #print("playsound done: ")
                             #except Exception as e:
                                 #print("playsound failed: ")
+
                 validator.processObjects()
+                incrementRecognizedFrameCounter(validator)
+
+                if valid_frame == 5:
+                   print("Accept")
+                   resetFrameCounter()
+                elif invalid_frame == 5:
+                   print("Deny")
+                   resetFrameCounter()
+                elif manual_check_frame == 5:
+                   print("Manual Check")
+                   resetFrameCounter()
+                                
 		label += '"null": 0.0'
 		label += '}' 
 		global jpeg
@@ -110,6 +126,33 @@ def greengrass_infinite_infer_run():
 		f = open(fifo_path,'w')
 		f.write(jpeg.tobytes())
 
+def incrementRecognizedFrameCounter(validator):
+    global valid_frame
+    global invalid_frame
+    global manual_check_frame
+    if validator.isFrameValid():
+       valid_frame += 1
+       invalid_frame = 0
+       manual_check_frame =0
+    elif validator.isFrameInvalid():
+       invalid_frame += 1
+       valid_frame = 0
+       manual_check_frame =0
+    elif validator.doesFrameNeedManualCheck():
+       manual_check_frame += 1
+       valid_frame = 0
+       invalid_frame = 0
+    else:
+       resetFrameCounter()
+
+def resetFrameCounter():
+    global valid_frame
+    global invalid_frame
+    global manual_check_frame
+    valid_frame = 0
+    invalid_frame = 0
+    manual_check_frame =0
+   
 if __name__=='__main__':
 	greengrass_infinite_infer_run()
         #print("mo version", mo.__version__);

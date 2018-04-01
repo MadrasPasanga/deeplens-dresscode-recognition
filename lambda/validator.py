@@ -60,18 +60,23 @@ class AttireValidator():
            for person in self.manualCheckPersonMap.keys() :
                self.action(self.frame, "Manual Check", (255,0,0), person.xmin, person.xmax, person.ymin, person.ymax)
  
-   def isAttireValid(self):
-       if len(validator.validPersonMap) > 0 and len(validator.invalidPersonMap) == 0 and len(validator.manualCheckPersonMap) == 0:
+   def isPersonInFrame(self):
+       if len(self.personList) > 0:
+          return True
+       return False   
+
+   def isFrameValid(self):
+       if len(self.validPersonMap) > 0 and len(self.invalidPersonMap) == 0 and len(self.manualCheckPersonMap) == 0:
           return True
        return False
  
-   def isAttireInvalid(self):
-       if len(validator.invalidPersonMap) > 0 and len(validator.manualCheckPersonMap) == 0:
+   def isFrameInvalid(self):
+       if len(self.invalidPersonMap) > 0 and len(self.manualCheckPersonMap) == 0:
           return True
        return False
  
  
-   def isAttireNeedsManualCheck(self):
-       if len(validator.manualCheckPersonMap) > 0:
+   def doesFrameNeedManualCheck(self):
+       if len(self.manualCheckPersonMap) > 0:
           return True
        return False
