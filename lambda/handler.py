@@ -83,7 +83,6 @@ def greengrass_infinite_infer_run():
 		# Run model inference on the resized frame
 		inferOutput = model.doInference(frameResize)
 
-
 		# Output inference result to the fifo file so it can be viewed with mplayer
 		parsed_results = model.parseResult(modelType, inferOutput)['ssd']
 		label = '{'
@@ -96,25 +95,10 @@ def greengrass_infinite_infer_run():
 			    ymax = int( yscale * obj['ymax'] )
                             validator.addRecognitionObject(RecognitionObject(outMap[obj['label']], xmin, xmax, ymin, ymax))
 			    label += '"{}": {:.2f},'.format(outMap[obj['label']], obj['prob'] )
-                            #try :
-                                #print("playsound started: ")
-                                #playsound("/home/aws_cam/Downloads/SampleAudio_0.4mb.mp3")
-                                #print("playsound done: ")
-                            #except Exception as e:
-                                #print("playsound failed: ")
 
                 validator.processObjects()
                 incrementRecognizedFrameCounter(validator)
-
-                if valid_frame == 5:
-                   print("Accept")
-                   resetFrameCounter()
-                elif invalid_frame == 5:
-                   print("Deny")
-                   resetFrameCounter()
-                elif manual_check_frame == 5:
-                   print("Manual Check")
-                   resetFrameCounter()
+                makeFrameDecision()
                                 
 		label += '"null": 0.0'
 		label += '}' 
@@ -152,6 +136,22 @@ def resetFrameCounter():
     valid_frame = 0
     invalid_frame = 0
     manual_check_frame =0
+
+def makeFrameDecision():
+    global valid_frame
+    global invalid_frame
+    global manual_check_frame
+    if valid_frame == 5:
+      resetFrameCounter()
+      playsound("/home/aws_cam/Downloads/access-granted.mp3")
+
+    elif invalid_frame == 5:
+      resetFrameCounter()
+      playsound("/home/aws_cam/Downloads/access-denied.mp3")
+
+    elif manual_check_frame == 5:
+      resetFrameCounter()
+      playsound("/home/aws_cam/Downloads/please-wait.mp3")
    
 if __name__=='__main__':
 	greengrass_infinite_infer_run()
