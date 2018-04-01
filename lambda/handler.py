@@ -98,7 +98,7 @@ def greengrass_infinite_infer_run():
 
                 validator.processObjects()
                 incrementRecognizedFrameCounter(validator)
-                makeFrameDecision()
+                makeFrameDecision(frameResize)
                                 
 		label += '"null": 0.0'
 		label += '}' 
@@ -109,6 +109,23 @@ def greengrass_infinite_infer_run():
 		    os.mkfifo(fifo_path)
 		f = open(fifo_path,'w')
 		f.write(jpeg.tobytes())
+
+def  writeFrameToS3AndPublishMessage(frame):
+    session = Session()
+    s3 = session.create_client('s3')
+    file_name = 'unrecognized-images/image-'+time.strftime("%Y%m%d-%H%M%S")+'.jpg'
+    ret, image = cv2.imencode('.jpg', frame)
+    image_bytes = image.tobytes()
+    s3Response = s3.put_object(ACL='public-read', Body=image_bytes, Bucket='deeplens-dresscode-recognition-images', Key=file_name)
+
+    s3Url = 'https://s3.amazonaws.com/deeplens-dresscode-recognition-images/'+file_name
+    message = 'Manual dress code check needed. You can view the image at ' + s3Url
+    sns = session.create_client('sns', region_name='us-east-1')
+    snsResponse = sns.publish(TargetArn='arn:aws:sns:us-east-1:565813021316:Manual_Dresscode_Check_Needed', 
+                              Message=message
+                              Subject='Manual dress check needed'
+                              MessageStructure='raw')
+    
 
 def incrementRecognizedFrameCounter(validator):
     global valid_frame
@@ -137,7 +154,7 @@ def resetFrameCounter():
     invalid_frame = 0
     manual_check_frame =0
 
-def makeFrameDecision():
+def makeFrameDecision(frame):
     global valid_frame
     global invalid_frame
     global manual_check_frame
@@ -152,6 +169,7 @@ def makeFrameDecision():
     elif manual_check_frame == 5:
       resetFrameCounter()
       playsound("/home/aws_cam/Downloads/please-wait.mp3")
+      writeFrameToS3(frame)
    
 if __name__=='__main__':
 	greengrass_infinite_infer_run()
